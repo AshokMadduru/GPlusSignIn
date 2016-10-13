@@ -1,6 +1,7 @@
 package com.shok.gplussignin;
 
 import android.content.Intent;
+import android.content.IntentSender;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -13,6 +14,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
@@ -21,6 +23,8 @@ import com.google.android.gms.common.api.Status;
 public class MainActivity extends AppCompatActivity implements
         GoogleApiClient.OnConnectionFailedListener, View.OnClickListener {
 
+    private final int REQUEST_RESOLVE_ERROR = 102;
+    private boolean mResolvingError = false;
     private final int RC_SIGN_IN = 101;
     private GoogleApiClient mGoogleApiClient;
     private Button signOutButton;
@@ -52,7 +56,24 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
+        if (mResolvingError) {
+            // Already attempting to resolve an error.
+            return;
+        } else if (connectionResult.hasResolution()) {
+            try {
+                mResolvingError = true;
+                connectionResult.startResolutionForResult(this, REQUEST_RESOLVE_ERROR);
+            } catch (IntentSender.SendIntentException e) {
+                // There was an error with the resolution intent. Try again.
+                mGoogleApiClient.connect();
+            }
+        } else {
+            GooglePlayServicesUtil.getErrorDialog(connectionResult.getErrorCode(), this,
+                    0).show();
+            // Show dialog using GooglePlayServicesUtil.getErrorDialog()
+            //showErrorDialog(result.getErrorCode());
+            mResolvingError = true;
+        }
     }
 
     @Override
